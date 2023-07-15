@@ -1,0 +1,17 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+boot() {
+        mv /etc/wireless/mediatek/wifi.lua   /usr/lib/lua/gl/
+        mv /etc/wireless/mediatek/gl_eqos   /usr/bin
+        iwpriv rax0 set AutoChannelSel=3
+        sleep 5
+        iwpriv rax0 set Channel=44
+        sleep 5
+        iwpriv ra0 set AutoChannelSel=3
+  	sleep 5
+  	iwpriv ra0 set Channel=6
+  	iwpirv rax0 set SiteSurvey=1
+  	iwpirv ra0 set SiteSurvey=1        
+}

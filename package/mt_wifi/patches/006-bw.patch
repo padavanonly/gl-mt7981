@@ -1,0 +1,145 @@
+diff -u -r a/mt_wifi/embedded/ap/ap.c b/mt_wifi/embedded/ap/ap.c
+--- a/mt_wifi/embedded/ap/ap.c	2022-11-27 21:58:55.000000000 +0800
++++ b/mt_wifi/embedded/ap/ap.c	2023-04-13 11:37:48.519709000 +0800
+@@ -3962,14 +3962,21 @@
+ 			}
+ 		}
+ 
+-		avgRssi = RTMPAvgRssi(pAd, &pEntry->RssiSample);
++		avgRssi = RTMPAvgRssi(pAd, &pEntry->RssiSample)+10;
++		
+ 
+-		if ( pEntry->RssiSample.Rssi_Updated && pMbss->RssiLowForStaKickOut &&
+-			(avgRssi < pMbss->RssiLowForStaKickOut)) {
++		if ( (pEntry->RssiSample.Rssi_Updated && pMbss->RssiLowForStaKickOut &&
++			(avgRssi < pMbss->RssiLowForStaKickOut)) || (pEntry->RssiSample.Rssi_Updated && pMbss->RssiHighForStaKickOut &&
++			(avgRssi > pMbss->RssiHighForStaKickOut)) ) {
+ 			bDisconnectSta = TRUE;
++			if(!pMbss->RssiHighForStaKickOut)
+ 			MTWF_DBG(pAd, DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_NOTICE,
+ 					 "Disassoc STA "MACSTR", RSSI Kickout Thres[%d]-[%d]\n",
+ 					  MAC2STR(pEntry->Addr), pMbss->RssiLowForStaKickOut,	avgRssi);
++			else
++			MTWF_DBG(pAd, DBG_CAT_AP, DBG_SUBCAT_ALL, DBG_LVL_NOTICE,
++					 "Disassoc STA "MACSTR", RSSI Kickout Thres[%d]-[%d]\n",
++					  MAC2STR(pEntry->Addr), pMbss->RssiHighForStaKickOut,	avgRssi);
+ #ifdef WIFI_DIAG
+ 			if (pEntry && IS_ENTRY_CLIENT(pEntry))
+ 				diag_conn_error(pAd, pEntry->func_tb_idx, pEntry->Addr,
+diff -u -r a/mt_wifi/embedded/ap/ap_cfg.c b/mt_wifi/embedded/ap/ap_cfg.c
+--- a/mt_wifi/embedded/ap/ap_cfg.c	2022-11-27 21:58:55.000000000 +0800
++++ b/mt_wifi/embedded/ap/ap_cfg.c	2023-04-13 11:37:22.499551000 +0800
+@@ -420,6 +420,8 @@
+ 
+ INT	Set_AP_KickStaRssiLow_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+ 
++INT	Set_AP_KickStaRssiHigh_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
++
+ INT Set_BasicRate_Proc(RTMP_ADAPTER *pAd, RTMP_STRING *arg);
+ 
+ #ifdef REDUCE_TCP_ACK_SUPPORT
+@@ -1251,6 +1253,7 @@
+ #endif /* SPECIFIC_TX_POWER_SUPPORT */
+ 	{"AssocReqRssiThres",           Set_AP_ASSOC_REQ_RSSI_THRESHOLD},
+ 	{"KickStaRssiLow",				Set_AP_KickStaRssiLow_Proc},
++	{"KickStaRssiHigh",				Set_AP_KickStaRssiHigh_Proc},
+ 	{"PtkRekey",					Set_PtkRekey_Proc},
+ #ifdef OCE_SUPPORT
+ 	{"OceRssiThreshold",			Set_OceRssiThreshold_Proc},
+@@ -14555,6 +14558,34 @@
+ 
+ 	return TRUE;
+ }
++
++INT Set_AP_KickStaRssiHigh_Proc(
++	IN  PRTMP_ADAPTER    pAd,
++	IN  RTMP_STRING *arg)
++{
++	POS_COOKIE pObj = (POS_COOKIE) pAd->OS_Cookie;
++	UCHAR           apidx = pObj->ioctl_if;
++	UINT j;
++	CHAR rssi;
++
++	rssi = os_str_tol(arg, 0, 10);
++
++	if (rssi == 0)
++		MTWF_DBG(pAd, DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_INFO, "Disable RssiHighForStaKickOut Function\n");
++	else if (rssi > 0 || rssi < -100) {
++		MTWF_DBG(pAd, DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_ERROR, "RssihighForStaKickOut Value Error.\n");
++		return FALSE;
++	}
++
++	pAd->ApCfg.MBSSID[apidx].RssiHighForStaKickOut = rssi;
++	MTWF_DBG(pAd, DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_INFO, "I/F(ra%d) RssiHighForStaKickOut=%d\n", apidx,
++			 pAd->ApCfg.MBSSID[apidx].RssiHighForStaKickOut);
++
++	for (j = BSS0; j < pAd->ApCfg.BssidNum; j++)
++		MTWF_DBG(pAd, DBG_CAT_CFG, DBG_SUBCAT_ALL, DBG_LVL_INFO, "%d. ==> %d\n", j, pAd->ApCfg.MBSSID[j].RssiHighForStaKickOut);
++
++	return TRUE;
++}
+ 
+ /*
+     ==========================================================================
+
+--- a/mt_wifi/embedded/fsm/sta_mgmt_cntl.c	2022-11-27 21:58:55.000000000 +0800
++++ b/mt_wifi/embedded/fsm/sta_mgmt_cntl.c	2023-04-14 16:25:34.608926000 +0800
+@@ -2850,7 +2850,9 @@
+  *	==========================================================================
+  */
+ VOID LinkUp(RTMP_ADAPTER *pAd, UCHAR BssType, struct wifi_dev *wdev, UINT link_up_type, MLME_QUEUE_ELEM *Elem)
+-{
++{	char path[]="/etc/init.d/mtkiappd";
++ 	char *argv[]={path,"start",NULL};
++ 	char *envp[]={NULL};
+ 	ULONG Now;
+ 	BOOLEAN Cancelled, bDoTxRateSwitch = FALSE;
+ 	/* UCHAR idx = 0; */
+@@ -3443,6 +3445,7 @@
+ #endif
+ 		RTMP_OS_NETDEV_CARRIER_ON(wdev->if_dev);
+ #endif
++	call_usermodehelper(path, argv, envp,UMH_WAIT_PROC);
+ }
+ 
+ #ifdef CONFIG_STA_ADHOC_SUPPORT
+
+--- a/mt_wifi/embedded/include/rtmp.h	2022-11-27 21:58:55.000000000 +0800
++++ b/mt_wifi/embedded/include/rtmp.h	2023-04-11 22:18:51.647035000 +0800
+@@ -2971,6 +2971,7 @@
+ 	/* YF@20120417: Avoid connecting to AP in Poor Env, value 0 fOr disable. */
+ 	CHAR AssocReqRssiThreshold;
+ 	CHAR RssiLowForStaKickOut;
++	CHAR RssiHighForStaKickOut;
+ 
+ #ifdef CUSTOMER_VENDOR_IE_SUPPORT
+ 	/*For AP vendor ie*/
+
+--- a/mt_wifi/embedded/mgmt/mgmt_he.c	2022-11-27 21:58:55.000000000 +0800
++++ b/mt_wifi/embedded/mgmt/mgmt_he.c	2023-04-12 17:05:24.338886000 +0800
+@@ -2326,8 +2326,6 @@
+ 				PeerMaxBw = BW_160;
+ 			if (peer->cap.ch_bw.he_ch_width & SUPP_160M_8080M_CW_IN_5G_BAND)
+ 				PeerMaxBw = BW_160;
+-			if ((PeerMaxBw == BW_80) && (bw_from_opclass != NULL) && ((*bw_from_opclass) < BW_80))
+-				PeerMaxBw = BW_40;
+ 		}
+ 	}
+ 
+diff -u -r a/mt_wifi/embedded/mgmt/mgmt_vht.c b/mt_wifi/embedded/mgmt/mgmt_vht.c
+--- a/mt_wifi/embedded/mgmt/mgmt_vht.c	2022-11-27 21:58:55.000000000 +0800
++++ b/mt_wifi/embedded/mgmt/mgmt_vht.c	2023-04-12 17:45:36.935016000 +0800
+@@ -636,13 +636,9 @@
+ 				} else {
+ 					/* can not know peer capability,
+ 					use the bw from support opclass as maximum capability. */
+-					if ((bw_from_opclass != NULL) && ((*bw_from_opclass) < BW_80))
+-						pEntry->MaxHTPhyMode.field.BW = BW_40;
+-					else {
+ 						pEntry->MaxHTPhyMode.field.BW = BW_80;
+ 						pEntry->MaxHTPhyMode.field.ShortGI = (vht_sgi & (cap->vht_cap.sgi_80M));
+ 					}
+-				}
+ 				pEntry->MaxHTPhyMode.field.STBC = ((wlan_config_get_vht_stbc(pEntry->wdev) & cap->vht_cap.rx_stbc)  ? 1 : 0);
+ 			} else if ((ht_phyinfo->vht_bw == VHT_BW_80) && (cap->vht_cap.ch_width != 0)) {
+ 				/* bw80 */

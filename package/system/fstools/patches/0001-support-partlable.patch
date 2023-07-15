@@ -1,0 +1,23 @@
+Index: fstools-2022-06-02-93369be0/libfstools/partname.c
+===================================================================
+--- fstools-2022-06-02-93369be0.orig/libfstools/partname.c
++++ fstools-2022-06-02-93369be0/libfstools/partname.c
+@@ -128,12 +128,13 @@ static struct volume *partname_volume_fi
+ 			return NULL;
+ 	}
+ 
+-	if (get_var_from_file("/proc/cmdline", "root", rootparam, sizeof(rootparam))) {
+-		rootdev = rootdevname(rootparam);
+-		/* find partition on same device as rootfs */
+-		snprintf(ueventgstr, sizeof(ueventgstr), "%s/%s/*/uevent", block_dir_name, rootdev);
++	if (get_var_from_file("/proc/cmdline", "root", rootparam, sizeof(rootparam)) &&
++		strncmp(rootparam, "PARTLABEL=", 10)) {
++			rootdev = rootdevname(rootparam);
++			/* root= is not PARTLABEL, find partition on same device as rootfs */
++			snprintf(ueventgstr, sizeof(ueventgstr), "%s/%s/*/uevent", block_dir_name, rootdev);
+ 	} else {
+-		/* no 'root=' kernel cmdline parameter, find on any block device */
++		/* PARTLABEL or no 'root=' kernel cmdline parameter, find on any block device */
+ 		snprintf(ueventgstr, sizeof(ueventgstr), "%s/*/uevent", block_dir_name);
+ 	}
+ 

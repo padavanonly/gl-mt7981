@@ -1,0 +1,51 @@
+
+. /lib/functions/uci-defaults.sh
+
+board_config_update
+
+board=$(board_name)
+
+case "$board" in
+glinet,xe3000-emmc |\
+glinet,x3000-emmc)
+        ucidef_set_led_netdev  "wlan2g" "WLAN2G" "wifi:2g"  "ra0"
+        ucidef_set_led_netdev  "wlan5g" "WLAN5G" "wifi:5g"  "rax0"
+	ucidef_set_led_default "power"  "POWER"  "power"    "1"
+        ;;
+esac
+case "$(board_name)" in
+*360,t7*)
+	ucidef_set_led_default "green" "GREEN" "360t7:green" "1"
+	ucidef_set_led_default "red" "RED" "360t7:red" "0"
+	;;
+*h3c,nx30pro*)
+	ucidef_set_led_default "green" "GREEN" "nx30pro:green" "1"
+	ucidef_set_led_default "red" "RED" "nx30pro:red" "0"
+;;
+*jcg,q30*)
+	ucidef_set_led_default "red" "RED" "q30:red" "0"
+	ucidef_set_led_default "blue" "BLUE" "q30:blue" "1"
+;;
+*cetron,ct3003*)
+	ucidef_set_led_default "green" "GREEN" "ct3003:green" "1"
+	ucidef_set_led_default "red" "RED" "ct3003:red" "0"
+	;;
+*cmcc,rax3000m*)
+	ucidef_set_led_default "blue" "BLUE" "rax3000m:blue" "1"
+	ucidef_set_led_default "red" "RED" "rax3000m:red" "0"
+	;;
+*wr30u*)
+        ucidef_set_led_default "sys_blue" "BLUE" "led_blue" "1"
+        ucidef_set_led_default "sys_yellow" "YELLOW" "led_yellow" "0"
+        ucidef_set_led_netdev "net_blue" "NET_BLUE" "net_blue" "eth1"
+	;;
+*komi,a31*)
+	ucidef_set_led_default "led_green" "GREEN" "komia31:green" "1"
+	ucidef_set_led_default "led_blue" "BLUE" "komia31:blue" "0"
+	;;
+esac
+
+board_config_flush
+
+exit 0
+
