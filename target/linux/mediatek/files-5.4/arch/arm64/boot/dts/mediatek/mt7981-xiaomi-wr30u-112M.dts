@@ -56,7 +56,7 @@
                         };
 
                         partition@7600000 {
-                                label = "KF";
+                                label = "stock-factory";
                                 reg = <0x7600000 0x40000>;
                         };
                 };

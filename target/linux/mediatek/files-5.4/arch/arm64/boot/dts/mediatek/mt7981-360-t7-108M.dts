@@ -28,8 +28,10 @@
 
 			partition@180000 {
 				label = "Factory";
-				reg = <0x180000 0x200000>;
+				reg = <0x180000 0x0200000>;
 			};
+
+			
 
 			partition@380000 {
 				label = "FIP";

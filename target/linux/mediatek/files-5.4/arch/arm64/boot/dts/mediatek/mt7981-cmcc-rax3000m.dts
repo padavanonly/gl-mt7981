@@ -21,7 +21,7 @@
                 switch-button = "gpio-455";
                 reset-button = "gpio-456";
                 radio = "mt798111 mt798112";
-                cfg-partition = "/dev/mtd6";
+                cfg-partition = "/dev/mtd4";
                 flash_size = <128>;
                 factory_data {
                         device_mac = "stock-factory", "0xb0";
@@ -102,8 +102,14 @@
 
 			partition@180000 {
 				label = "Factory";
-				reg = <0x180000 0x0200000>;
+				reg = <0x180000 0x0100000>;
 			};
+
+			partition@280000 {
+				label = "stock-factory";
+				reg = <0x280000 0x100000>;
+			};
+			
 
 
 			partition@380000 {
@@ -116,10 +122,6 @@
 				reg = <0x580000 0x4000000>;
 			};
 
-			partition@7400000 {
-				label = "stock-factory";
-				reg = <0x7400000 0x80000>;
-			};
 	};
 };
 };

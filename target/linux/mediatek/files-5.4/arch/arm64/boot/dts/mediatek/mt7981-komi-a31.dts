@@ -26,9 +26,15 @@
                         };
 
                         partition@180000 {
-                                label = "Factory";
-                                reg = <0x180000 0x200000>;
-                        };
+				label = "Factory";
+				reg = <0x180000 0x0100000>;
+			};
+
+			partition@280000 {
+				label = "stock-factory";
+				reg = <0x280000 0x100000>;
+			};
+			
 
                         partition@380000 {
                                 label = "FIP";

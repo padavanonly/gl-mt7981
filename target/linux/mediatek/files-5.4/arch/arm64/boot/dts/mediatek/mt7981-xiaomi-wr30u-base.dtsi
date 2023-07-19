@@ -25,11 +25,11 @@
                 cfg-partition = "/dev/mtd9";
                 flash_size = <128>;
                 factory_data {
-                        device_mac = "KF", "0xb0";
-                        device_ddns = "KF", "0xc0";
-                        device_sn_bak = "KF", "0xd0";
-                        device_sn = "KF", "0xe0";
-                        country_code = "KF", "0x7a";
+                        device_mac = "stock-factory", "0xb0";
+                        device_ddns = "stock-factory", "0xc0";
+                        device_sn_bak = "stock-factory", "0xd0";
+                        device_sn = "stock-factory", "0xe0";
+                        country_code = "stock-factory", "0x7a";
                 };
         };
         

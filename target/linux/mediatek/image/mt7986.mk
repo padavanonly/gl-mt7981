@@ -366,3 +366,58 @@ define Device/mediatek_mt7986-fpga-ubi
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
 endef
 TARGET_DEVICES += mediatek_mt7986-fpga-ubi
+
+define Device/xiaomi_redmi-router-ax6000-uboot
+   DEVICE_VENDOR := Xiaomi
+   DEVICE_MODEL := Redmi Router AX6000 (uboot layout)
+   DEVICE_DTS := mt7986a-xiaomi-redmi-router-ax6000-uboot
+   DEVICE_DTS_DIR := $(DTS_DIR)/mediatek
+   DEVICE_PACKAGES :=luci-app-mtk l1profile wireless-tools kmod-conninfra kmod-warp kmod-mt_wifi ipv6helper kmod-mediatek_hnat bash autocore-arm mtkhnat_util kmod-leds-ws2812b
+   UBINIZE_OPTS := -E 5
+   BLOCKSIZE := 128k
+   PAGESIZE := 2048
+   KERNEL_IN_UBI := 1
+   IMAGES := factory.bin sysupgrade.bin
+   IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+ endef
+ TARGET_DEVICES += xiaomi_redmi-router-ax6000-uboot
+
+define Device/xiaomi_redmi-router-ax6000
+   DEVICE_VENDOR := Xiaomi
+   DEVICE_MODEL := Redmi Router AX6000
+   DEVICE_DTS := mt7986a-xiaomi-redmi-router-ax6000
+   DEVICE_DTS_DIR := $(DTS_DIR)/mediatek
+   DEVICE_PACKAGES :=luci-app-mtk l1profile wireless-tools kmod-conninfra kmod-warp kmod-mt_wifi ipv6helper kmod-mediatek_hnat bash autocore-arm mtkhnat_util kmod-leds-ws2812b
+   UBINIZE_OPTS := -E 5
+   BLOCKSIZE := 128k
+   PAGESIZE := 2048
+   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+ endef
+ TARGET_DEVICES += xiaomi_redmi-router-ax6000
+ 
+ define Device/tplink_tl-common
+   DEVICE_VENDOR := TP-Link
+   DEVICE_DTS_DIR := $(DTS_DIR)/mediatek
+   UBINIZE_OPTS := -E 5
+   BLOCKSIZE := 128k
+   PAGESIZE := 2048
+   KERNEL_IN_UBI := 1
+   IMAGES := factory.bin sysupgrade.bin
+   IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
+   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+
+define Device/tplink_tl-xdr6086
+   DEVICE_MODEL := TL-XDR6086
+   DEVICE_DTS := mt7986a-tl-xdr6086
+   $(call Device/tplink_tl-common)
+endef
+TARGET_DEVICES += tplink_tl-xdr6086
+
+define Device/tplink_tl-xdr6088
+   DEVICE_MODEL := TL-XDR6088
+   DEVICE_DTS := mt7986a-tl-xdr6088
+   $(call Device/tplink_tl-common)
+endef
+TARGET_DEVICES += tplink_tl-xdr6088

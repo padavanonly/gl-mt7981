@@ -19,10 +19,57 @@ mediatek_setup_interfaces()
 		ucidef_add_switch "switch0" \
 			"0:lan" "1:lan" "2:lan" "3:lan" "4:lan" "5:lan" "6u@eth0"
 		;;
-	*)
-		ucidef_set_interfaces_lan_wan "lan0 lan1 lan2 lan3 lan4 lan5" eth1
+	xiaomi,redmi-router-ax6000|\
+ 	xiaomi,redmi-router-ax6000-uboot)
+		ucidef_set_interfaces_lan_wan "eth0 ra0 rai0 ra1 rai1" "eth1"
+ 		ucidef_add_switch "switch0" \
+				  "1:lan:4" "2:lan:3" "3:lan:2"  "4:wan" "6u@eth0" "5u@eth1"
+		;;
+ 	*)
+		ucidef_set_interfaces_lan_wan "ra0 rai0 eth0" "eth1"
+		ucidef_add_switch "switch0" \
+			"0:lan" "1:lan" "2:lan" "3:lan" "4:lan" "5:lan" "6u@eth0"
 		;;
 	esac
+}
+
+mtk_facrory_write_mac()
+{
+	local part_name=$1
+	local offset=$2
+	local macaddr=$3 #aa:bb:cc:dd:ee:ff
+	local data=""
+
+	part=$(find_mtd_part $part_name)
+	if [ -n "$part" ] && [ -n "$macaddr" ]; then
+		local i=1
+		for x in ${macaddr//:/ }; do
+			[ $i -gt 6 ] && break
+			data=${data}"\x${x}"
+			i=$((i+1))
+		done
+		dd if=$part of=/tmp/Factory.backup
+		printf "${data}" | dd conv=notrunc of=/tmp/Factory.backup bs=1 seek=$((${offset}))
+		mtd write /tmp/Factory.backup $part_name
+		rm -rf /tmp/Factory.backup
+	fi
+}
+
+mtk_factory_get_byte()
+{
+	local part_name=$1
+	local offset=$2
+	local len=$3
+
+	part=$(find_mtd_part $part_name)
+	if [ -n "$part" ]; then
+		hexdump -n $len -s $offset -e ''`expr ${len} - 1`'/1 "%02x-" "%02x"' $part
+	fi
+}
+
+mtk_factory_read()
+{
+dd if=/dev/mmcblk0p3 of=/lib/firmware/MT7986_ePAeLNA_EEPROM_AX6000.bin
 }
 
 mediatek_setup_macs()
@@ -41,8 +88,23 @@ mediatek_setup_macs()
 		;;
 	esac
 
-	lan_mac=$(mtd_get_mac_binary $part_name $lan_mac_offset)
+	
 	wan_mac=$(mtd_get_mac_binary $part_name $wan_mac_offset)
+	
+	case $board in
+ 	tplink,tl-xdr6086|\
+ 	tplink,tl-xdr6088)
+ 		wan_mac=$(mtd_get_mac_binary config 0x1c)
+ 		lan_mac=$(macaddr_add "$wan_mac" 1)
+ 		if [ "$(mtk_factory_get_byte "Factory" 4 2)" = "00-0c" ]; then
+					local wifi_mac="$(macaddr_add $lan_mac 0x2)"
+					mtk_facrory_write_mac "Factory" 4 $wifi_mac
+		fi
+		;;
+ 	*)
+ 		mtk_factory_read
+ 		;;
+ 	esac
 
 	case "$lan_mac" in
 		00:00:00:00:00:00);;
